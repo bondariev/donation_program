@@ -3,11 +3,11 @@ import { Program, BN} from "@project-serum/anchor";
 import { DonationProgram } from "../target/types/donation_program";
 const { PublicKey, Connection} = require("@solana/web3.js");
 import assert from "assert";
-const programID = new PublicKey("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+const programID = new PublicKey("3hw9TxUbMuGhmdt8BghBgstGTzWWBjV2qQy9dA5gGr9U");
 
 
-let DONATOR_SEED = "donator_8";
-let PROGRAM_SEED = "donate_account_21";
+let DONATOR_SEED = "donator_9";
+let PROGRAM_SEED = "donate_account_22";
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 describe("donation_program", () => {

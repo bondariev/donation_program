@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { BN,Idl,Program,Provider,web3 } from "@project-serum/anchor";
+  import { BN,Idl,Program,Provider} from "@project-serum/anchor";
+  import * as anchor from "@project-serum/anchor";
   import Wallet from "@project-serum/sol-wallet-adapter";
-  import { Connection,PublicKey } from "@solana/web3.js";
   import { Buffer } from "buffer";
   import { onMount } from "svelte";
   import * as idl from "./idl/donation_program.json";
   import type { DonationProgram } from "./types/donation_program";
-  const { SystemProgram, Keypair } = web3;
 
   // ======== APPLICATION STATE ========
-  let DONATOR_SEED = "donator_8";
-  let PROGRAM_SEED = "donate_account_20";
+  let DONATOR_SEED = "donator_9";
+  let PROGRAM_SEED = "donate_account_22";
   let BASE_ACCOUNT;
 
   let account = "";
@@ -18,7 +17,7 @@
 
   $: account && console.log(`connected to sollet wallet: ${account}`);
 
-  let solletWallet = new Wallet("https://www.sollet.io", "testnet")
+  let solletWallet = new Wallet("https://www.sollet.io", "devnet")
 
   // ======== PAGE LOAD CHECKS ========
 
@@ -38,29 +37,20 @@
 
   // ======== CONNECT WALLET ========
   const handleConnectWallet = async () => {
-    //const resp = await wallet.connect();
-    await solletWallet.connect()
+    await solletWallet.disconnect();
+    const resp = await solletWallet.connect();
   };
-
-  const isConnected = async () => {
-    //const resp = await wallet.connect();
-
-    console.log(solletWallet.connected);
-     return solletWallet.connected;
-  };
-
-
 
   // ======== CONNECT TO NETWORK ========
 
   // get program id from IDL, the metadata is only available after a deployment
   //const programID = new PublicKey(idl.metadata.address);
-  const programID = new PublicKey("9bKQJH1L9zmSH5Ds9ePHu85aKHCgsNzVGYoub9ihJik1");
+  const programID = new anchor.web3.PublicKey("3hw9TxUbMuGhmdt8BghBgstGTzWWBjV2qQy9dA5gGr9U");
 
   // we are using local network endpoint for now
-  const network = "http://127.0.0.1:8899";
+  const network = "https://api.devnet.solana.com";
 
-  const connection = new Connection(network, "confirmed");
+  const connection = new anchor.web3.Connection(network, "confirmed");
 
   // create a network and wallet context provider
   const getProvider = () => {
@@ -80,84 +70,67 @@
     return program;
   };
 
+
   // ======== INITIATE BASE ACCOUNT ========
   
   const getMainAccount = async () => {
-    const [donatePDA, donateBump] = await web3.PublicKey.findProgramAddress([Buffer.from(PROGRAM_SEED)], programID);
+    const [donatePDA, donateBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(PROGRAM_SEED)], programID);
     BASE_ACCOUNT = donatePDA;
   };
 
   const initializeAccount = async () => {
-    const [donatePDA, donateBump] = await web3.PublicKey.findProgramAddress([Buffer.from(PROGRAM_SEED)], programID);
-    BASE_ACCOUNT = donatePDA;
+    const [donatePDA, donateBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(PROGRAM_SEED)], programID);
     const provider = getProvider();
     const program = getProgram();
-    const _baseAccount = Keypair.generate();
-    Keypair;
-
-    const tx = program.transaction.initialize(donateBump,{
-      accounts: {
-        user: provider.wallet.publicKey,
-        donateAccount: BASE_ACCOUNT,     
-        systemProgram: SystemProgram.programId,
-      },
-      signers: [],
-    });
-
-    tx.feePayer = provider.wallet.publicKey;
-    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    const signedTx = await provider.wallet.signTransaction(tx);
-    const txId = await connection.sendRawTransaction(signedTx.serialize());
-    await connection.confirmTransaction(txId);
-    console.log("Transaction " + txId + " confirmed");
+    try {
+      await program.rpc.initialize(donateBump,{
+        accounts: {
+          user: provider.wallet.publicKey,
+          donateAccount: donatePDA,      
+          systemProgram: anchor.web3.SystemProgram.programId
+        },
+      });
+      await getDonateAccountOwner();
+      console.log("owner account initialized")
+    }catch (e) {
+      console.log(e);
+    }
   };
 
   let userAccount = "";
   let lamports = 0;
   const donate = async () => {
+    console.log(solletWallet.connected);
     await getMainAccount();
     const provider = getProvider();
     const program = getProgram();
-    const [donatorPDA, donatorBump] = await web3.PublicKey.findProgramAddress([Buffer.from(DONATOR_SEED),provider.wallet.publicKey.toBuffer()], programID);
+    const [donatorPDA, donatorBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(DONATOR_SEED),provider.wallet.publicKey.toBuffer()], programID);
 
     let isUserExist = false;
     try{
       await program.account.donatorInfo.fetch(donatorPDA);
       isUserExist = true;
-    }catch (e){
-      console.log(e);
+    }catch (e){console.log(e);}
 
-    }
-    let tx;
-    if(isUserExist){
-      tx = program.transaction.donate(new BN(lamports),{
-      accounts: {
-        donator: provider.wallet.publicKey,
-        donatorInfo: donatorPDA,
-        donateAccount: BASE_ACCOUNT,       
-        systemProgram: SystemProgram.programId,
-      },
-      signers: [],
-    });
-    }else{
-    tx = program.transaction.initDonator(donatorBump,{
+    console.log("try to donate");
+    const init_donator = program.transaction.initDonator(donatorBump,{
         accounts: {
           donator: provider.wallet.publicKey,
           donatorInfo: donatorPDA,     
-          systemProgram: SystemProgram.programId,
+          systemProgram: anchor.web3.SystemProgram.programId,
         },
-        signers: [],
       });
-      tx.add(program.transaction.donate(new BN(lamports),{
+    const donate = program.transaction.donate(new BN(lamports),{
         accounts: {
           donator: provider.wallet.publicKey,
           donatorInfo: donatorPDA,
           donateAccount: BASE_ACCOUNT,       
-          systemProgram: SystemProgram.programId,
+          systemProgram: anchor.web3.SystemProgram.programId,
         },
-        signers: [],
-      }));
-    }
+    });
+    let tx;
+    if (!isUserExist){tx = init_donator.add(donate)
+    }else{tx = donate;} 
 
     tx.feePayer = provider.wallet.publicKey;
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
@@ -167,13 +140,12 @@
     console.log("Transaction " + txId + " confirmed");
     await getDonateAccountOwner();
     if(userAccount != ""){
-    await getDonationAmmountByAcoount();
+      await getDonationAmmountByAcoount();
     }
-
   };
 
-  let owner;
-  let total = 0;
+  let owner ="";
+  let total = "0";
 
   const getDonateAccountOwner = async () => {
     await getMainAccount();
@@ -181,8 +153,8 @@
     const account = await program.account.donateAccount.fetch(
       BASE_ACCOUNT
     );
-    owner = account.accountOwner;
-    total = account.ammount;
+    owner = account.accountOwner.toString();
+    total = account.ammount.toString();
   };
 
   let DonationAmmountByAcoount = 0;
@@ -190,14 +162,13 @@
 
   
   const getDonationAmmountByAcoount = async () => {
-    let userKey = new PublicKey(userAccount)
-    const [donatorPDA, donateBump] = await web3.PublicKey.findProgramAddress([Buffer.from(DONATOR_SEED),userKey.toBuffer()], programID);
+    let userKey = new anchor.web3.PublicKey(userAccount)
+    const [donatorPDA, donateBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(DONATOR_SEED),userKey.toBuffer()], programID);
     const program = getProgram();
     let account;
     try{
       account = await program.account.donatorInfo.fetch(donatorPDA);
-      DonationAmmountByAcoount = account.ammount
-      //console.log("Got the DonationAmmountByAcoount", account.ammount);
+      DonationAmmountByAcoount = account.ammount;
       isDonationAmmountByAcoount = true
     }catch (e){
       console.log(e);
@@ -223,27 +194,20 @@
   const withdrawDonations= async () => {
     const provider = getProvider();
     const program = getProgram();
-    const tx = program.transaction.withdraw({
-      accounts: {
-        user: provider.wallet.publicKey,
-        donateAccount: BASE_ACCOUNT,
-        to: provider.wallet.publicKey,    
-        systemProgram: SystemProgram.programId,
-      },
-      signers: [],
-    });
-
-    try {
-      tx.feePayer = provider.wallet.publicKey;
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-      const signedTx = await provider.wallet.signTransaction(tx);
-      const txId = await connection.sendRawTransaction(signedTx.serialize());
-      await connection.confirmTransaction(txId);
-      console.log("Transaction " + txId + " confirmed");
-    } catch (err) {
-      console.log(err.toString());
-    }
-    await getDonateAccountOwner();
+    try{
+      await program.rpc.withdraw({
+        accounts: {
+          user: provider.wallet.publicKey,    
+          donateAccount:BASE_ACCOUNT,
+          to:provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId
+        },
+      });
+      console.log("withdraw donations ok!");
+      await getDonateAccountOwner();
+    }catch (e) {
+        console.log(e);
+      }
   };
 
 </script>
@@ -272,6 +236,7 @@
       type="number"
       placeholder="lamports.."
       bind:value={lamports}
+      min=1
     />  
     <button on:click={donate}>Donate</button></p>
   </div>
@@ -305,7 +270,7 @@
   {#if total}
   <div>
   <p><strong>Owner:</strong></p>
-  <p>Owner key: {owner.toString()}</p>
+  <p>Owner key: {owner}</p>
   <p>Total ammount: {total}</p>
   </div>
   {/if}

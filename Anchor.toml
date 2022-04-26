@@ -1,13 +1,15 @@
 [features]
 seeds = false
-[programs.localnet]
-donation_program = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+#[programs.localnet]
+[programs.devnet]
+donation_program = "3hw9TxUbMuGhmdt8BghBgstGTzWWBjV2qQy9dA5gGr9U"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+#cluster = "localnet"
+cluster = "devnet"
 wallet = "/home/oleksandr/.config/solana/id.json"
 
 [test]

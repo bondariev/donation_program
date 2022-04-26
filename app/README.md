@@ -1,3 +1,8 @@
-solana logs --url localhost
+Solana anchor simple donate program
 
-28.785074281
+
+frontend - svetle
+cd app
+yarn install
+yarn dev
+

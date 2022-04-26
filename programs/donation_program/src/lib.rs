@@ -1,25 +1,8 @@
-/*use anchor_lang::prelude::*;
-
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
-
-#[program]
-pub mod donation_program {
-    use super::*;
-
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        Ok(())
-    }
-}
-
-#[derive(Accounts)]
-pub struct Initialize {}*/
-
 use anchor_lang::prelude::*;
 
-pub const DONATOR_SEED: &[u8] = b"donator_8";
-pub const PROGRAM_SEED: &[u8] = b"donate_account_21";
-//declare_id!("9bKQJH1L9zmSH5Ds9ePHu85aKHCgsNzVGYoub9ihJik1");
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+pub const DONATOR_SEED: &[u8] = b"donator_9";
+pub const PROGRAM_SEED: &[u8] = b"donate_account_22";
+declare_id!("3hw9TxUbMuGhmdt8BghBgstGTzWWBjV2qQy9dA5gGr9U");
 
 #[program]
 pub mod donation_program{
